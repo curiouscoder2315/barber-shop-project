@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* 1. Default Body Background & Text */
+  body {
+    @apply bg-gray-50 text-gray-900 transition-colors duration-300;
+  }
+
+  .dark body {
+    @apply bg-slate-900 text-gray-100;
+  }
+
+  /* 2. GLOBAL INPUT FIX (The Magic Part) */
+  /* This forces ALL inputs to look correct in Dark Mode */
+  .dark input, 
+  .dark textarea, 
+  .dark select {
+    background-color: #1e293b !important; /* slate-800 */
+    color: white !important;
+    border-color: #475569 !important;     /* slate-600 */
+  }
+
+  /* Fix the placeholder text color (e.g. "Enter your name") */
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #94a3b8 !important; /* slate-400 */
+  }
+
+  /* 3. Fix Browser Auto-Fill (When Chrome turns input blue/yellow) */
+  .dark input:-webkit-autofill,
+  .dark input:-webkit-autofill:hover, 
+  .dark input:-webkit-autofill:focus, 
+  .dark textarea:-webkit-autofill {
+    -webkit-text-fill-color: white !important;
+    -webkit-box-shadow: 0 0 0px 1000px #1e293b inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+  
+  /* 4. Global Headings */
+  .dark h1, .dark h2, .dark h3, .dark h4 {
+    color: white !important;
+  }
+}
+
+/* Custom Scrollbar (Optional, looks nice) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-slate-600 rounded-full;
+}
