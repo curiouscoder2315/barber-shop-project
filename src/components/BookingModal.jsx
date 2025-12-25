@@ -1,25 +1,55 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, CreditCard, CheckCircle, X } from 'lucide-react';
+import { Calendar, Clock, CreditCard, CheckCircle, X, Loader } from 'lucide-react';
+import { auth, db } from '../firebase/config'; // Import Firebase
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'; // Import Firestore functions
 
-export default function BookingModal({ shop, onClose }) {
+export default function BookingModal({ shop, service, onClose }) {
   const [step, setStep] = useState(1);
   const [date, setDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [loading, setLoading] = useState(false); // Loading state
   
-  // Fake Slots (Randomly booked)
   const slots = [
     { time: "10:00 AM", available: true },
-    { time: "10:30 AM", available: false }, // Booked
+    { time: "10:30 AM", available: false },
     { time: "11:00 AM", available: true },
     { time: "11:30 AM", available: true },
-    { time: "12:00 PM", available: false }, // Booked
+    { time: "12:00 PM", available: false },
     { time: "01:00 PM", available: true },
     { time: "02:00 PM", available: true },
-    { time: "04:00 PM", available: false }, // Booked
+    { time: "04:00 PM", available: false },
   ];
 
-  const handleBook = () => {
-    setStep(4); // Show Success
+  const handleBook = async () => {
+    if (!auth.currentUser) {
+      alert("You must be logged in to book!");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // SAVE TO FIREBASE
+      await addDoc(collection(db, "bookings"), {
+        userId: auth.currentUser.uid,
+        userName: auth.currentUser.displayName || "Customer",
+        shopId: shop.id,
+        shopName: shop.shopName,
+        shopImage: shop.image || '',
+        serviceName: service.name,
+        servicePrice: service.price,
+        date: date,
+        time: selectedSlot,
+        status: 'Upcoming', // Default status
+        createdAt: serverTimestamp()
+      });
+
+      setLoading(false);
+      setStep(4); // Show Success
+    } catch (error) {
+      console.error("Error booking:", error);
+      setLoading(false);
+      alert("Booking failed. Please try again.");
+    }
   };
 
   return (
@@ -31,7 +61,7 @@ export default function BookingModal({ shop, onClose }) {
         <div className="bg-indigo-900 p-6 text-white flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold">Book Appointment</h2>
-            <p className="text-indigo-200 text-sm">at {shop.shopName}</p>
+            <p className="text-indigo-200 text-sm">at {shop.shopName} • {service?.name}</p>
           </div>
           <button onClick={onClose} className="bg-white bg-opacity-20 p-2 rounded-full hover:bg-opacity-30"><X size={20}/></button>
         </div>
@@ -73,13 +103,16 @@ export default function BookingModal({ shop, onClose }) {
           {step === 3 && (
             <div className="animate-fade-in">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><CreditCard className="text-indigo-600"/> Payment Mode</h3>
+              
+              <div className="bg-gray-50 p-4 rounded-xl mb-6">
+                <div className="flex justify-between mb-2 text-sm text-gray-500"><span>Service Charge</span><span>₹{service.price}</span></div>
+                <div className="flex justify-between font-bold text-lg"><span>Total Amount</span><span>₹{service.price}</span></div>
+              </div>
+
               <div className="space-y-3 mb-6">
-                <button onClick={handleBook} className="w-full p-4 border rounded-xl flex items-center justify-between hover:bg-green-50 hover:border-green-500 group">
+                <button onClick={handleBook} disabled={loading} className="w-full p-4 border rounded-xl flex items-center justify-between hover:bg-green-50 hover:border-green-500 group transition">
                   <span className="font-bold">Pay at Salon (Cash/UPI)</span>
-                  <span className="text-green-600 font-bold">Select</span>
-                </button>
-                <button disabled className="w-full p-4 border rounded-xl flex items-center justify-between opacity-50 cursor-not-allowed">
-                  <span className="font-bold">Pay Online (Coming Soon)</span>
+                  {loading ? <Loader className="animate-spin text-indigo-600"/> : <span className="text-green-600 font-bold">Confirm Booking</span>}
                 </button>
               </div>
             </div>
@@ -94,6 +127,7 @@ export default function BookingModal({ shop, onClose }) {
               <h2 className="text-3xl font-bold text-gray-800 mb-2">Booking Confirmed!</h2>
               <p className="text-gray-500 mb-6">Your slot at <span className="font-bold text-black">{shop.shopName}</span> is reserved.</p>
               <div className="bg-gray-50 p-4 rounded-xl mb-6 text-left">
+                <p><strong>Service:</strong> {service.name}</p>
                 <p><strong>Date:</strong> {date}</p>
                 <p><strong>Time:</strong> {selectedSlot}</p>
               </div>

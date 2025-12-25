@@ -8,13 +8,19 @@ export default function ShopDetails() {
   const { state } = useLocation();
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
+  const [selectedService, setSelectedService] = useState(null); // NEW STATE
   const shop = state?.shop;
 
   if (!shop) return <div>Data missing.</div>;
 
-  // Constants for calc
-  const AVG_QUEUE_TIME_PER_PERSON = 20; // 20 mins per person
+  const AVG_QUEUE_TIME_PER_PERSON = 20; 
   const currentQueueWait = shop.queueLength * AVG_QUEUE_TIME_PER_PERSON;
+
+  // NEW: Helper to open modal with service
+  const handleBookClick = (service) => {
+    setSelectedService(service);
+    setShowModal(true);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -26,9 +32,7 @@ export default function ShopDetails() {
         <button onClick={() => navigate(-1)} className="absolute top-8 left-6 bg-white/20 hover:bg-white/40 backdrop-blur-md p-3 rounded-full text-white z-20 transition">
           <ArrowLeft />
         </button>
-        
         <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-gray-900 to-transparent h-32"></div>
-
         <div className="absolute bottom-10 left-6 right-6 text-white z-20 flex flex-col md:flex-row justify-between items-end gap-4">
           <div>
             <h1 className="text-4xl md:text-5xl font-bold mb-2">{shop.shopName}</h1>
@@ -49,7 +53,7 @@ export default function ShopDetails() {
 
       <div className="max-w-5xl mx-auto px-6 -mt-8 relative z-10">
         
-        {/* LIVE STATUS CARD */}
+        {/* Status Card */}
         <div className="bg-white rounded-2xl shadow-xl p-6 mb-8 border-l-8 border-indigo-600 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-4">
             <div className="bg-indigo-50 p-4 rounded-full">
@@ -60,9 +64,7 @@ export default function ShopDetails() {
               <h3 className="text-3xl font-extrabold text-gray-900">{shop.queueLength} People <span className="text-lg font-normal text-gray-400">waiting</span></h3>
             </div>
           </div>
-          
           <div className="hidden md:block w-px h-12 bg-gray-200"></div>
-
           <div className="flex items-center gap-4">
             <div className="bg-yellow-50 p-4 rounded-full">
               <Hourglass className="text-yellow-600" size={32} />
@@ -72,17 +74,14 @@ export default function ShopDetails() {
               <h3 className="text-3xl font-extrabold text-gray-900">{currentQueueWait} <span className="text-lg font-normal text-gray-400">mins</span></h3>
             </div>
           </div>
-
           <div className="bg-green-50 px-6 py-3 rounded-xl border border-green-100">
              <p className="text-xs font-bold text-green-800 uppercase mb-1">Status</p>
              <p className="font-bold text-green-600 flex items-center gap-2"><span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Shop is Open</p>
           </div>
         </div>
 
-        {/* DETAILS & SERVICES */}
+        {/* Services List */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          {/* Left Column: Info */}
           <div className="md:col-span-1 space-y-6">
             <div className="bg-white rounded-2xl shadow-sm p-6">
               <h3 className="font-bold text-gray-900 mb-4">About the Shop</h3>
@@ -94,7 +93,6 @@ export default function ShopDetails() {
             </div>
           </div>
 
-          {/* Right Column: Services */}
           <div className="md:col-span-2">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">Select a Service</h3>
             <div className="space-y-4">
@@ -111,7 +109,8 @@ export default function ShopDetails() {
                     </div>
                     <div className="flex items-center gap-6">
                       <span className="font-bold text-2xl text-gray-700">₹{s.price}</span>
-                      <button onClick={() => setShowModal(true)} className="bg-black text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-800 transition shadow-lg transform active:scale-95">
+                      {/* UPDATED BUTTON CLICK */}
+                      <button onClick={() => handleBookClick(s)} className="bg-black text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-800 transition shadow-lg transform active:scale-95">
                         Book
                       </button>
                     </div>
@@ -120,11 +119,11 @@ export default function ShopDetails() {
               })}
             </div>
           </div>
-
         </div>
       </div>
 
-      {showModal && <BookingModal shop={shop} onClose={() => setShowModal(false)} />}
+      {/* PASSING SERVICE TO MODAL */}
+      {showModal && <BookingModal shop={shop} service={selectedService} onClose={() => setShowModal(false)} />}
     </div>
   );
 }
