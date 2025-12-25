@@ -3,9 +3,9 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { auth, db } from '../firebase/config';
 import Sidebar from '../components/Sidebar';
 import { useNavigate } from 'react-router-dom';
-import { Star, MapPin, Sparkles, User, Clock } from 'lucide-react';
+import { Star, MapPin, Sparkles, User, Clock, Users, Filter, Hourglass } from 'lucide-react';
 
-// --- DEMO DATA ---
+// --- ENHANCED DEMO DATA ---
 const staticBarbers = [
   {
     id: 'demo-1',
@@ -16,8 +16,14 @@ const staticBarbers = [
     reviews: 124,
     isOpen: true,
     personalVisitCharge: 200,
+    address: "Shop 12, Main Market, Andheri West",
+    queueLength: 4, // 4 people waiting
     schedule: "10:00 AM - 9:00 PM",
-    services: [{name: 'Haircut', price: 250}, {name: 'Beard Trim', price: 150}, {name: 'Head Massage', price: 300}],
+    services: [
+      {name: 'Haircut', price: 250, time: 30}, 
+      {name: 'Beard Trim', price: 150, time: 15}, 
+      {name: 'Head Massage', price: 300, time: 20}
+    ],
     description: "Premium grooming experience with 10+ years of experience. AC salon with free WiFi."
   },
   {
@@ -29,8 +35,13 @@ const staticBarbers = [
     reviews: 89,
     isOpen: true,
     personalVisitCharge: 300,
+    address: "Opposite City Mall, Link Road",
+    queueLength: 2,
     schedule: "9:00 AM - 10:00 PM",
-    services: [{name: 'Fade Cut', price: 350}, {name: 'Facial', price: 800}],
+    services: [
+      {name: 'Fade Cut', price: 350, time: 40}, 
+      {name: 'Facial', price: 800, time: 60}
+    ],
     description: "Modern styling for the modern man. Specialists in fades and beard styling."
   },
   {
@@ -42,8 +53,13 @@ const staticBarbers = [
     reviews: 45,
     isOpen: false,
     personalVisitCharge: 150,
+    address: "Near Railway Station, Dadar East",
+    queueLength: 0,
     schedule: "8:00 AM - 8:00 PM",
-    services: [{name: 'Quick Cut', price: 150}, {name: 'Shave', price: 100}],
+    services: [
+      {name: 'Quick Cut', price: 150, time: 20}, 
+      {name: 'Shave', price: 100, time: 15}
+    ],
     description: "Budget friendly and quick service. Best for daily grooming."
   },
   {
@@ -55,8 +71,13 @@ const staticBarbers = [
     reviews: 210,
     isOpen: true,
     personalVisitCharge: 500,
+    address: "High Street Phoenix, Lower Parel",
+    queueLength: 8,
     schedule: "11:00 AM - 7:00 PM",
-    services: [{name: 'Groom Package', price: 2500}, {name: 'Styling', price: 800}],
+    services: [
+      {name: 'Groom Package', price: 2500, time: 120}, 
+      {name: 'Styling', price: 800, time: 45}
+    ],
     description: "Luxury salon visited by celebrities. Appointment only."
   },
   {
@@ -68,8 +89,13 @@ const staticBarbers = [
     reviews: 67,
     isOpen: true,
     personalVisitCharge: 250,
+    address: "Green Park Society, Juhu",
+    queueLength: 3,
     schedule: "10:00 AM - 8:00 PM",
-    services: [{name: 'Haircut', price: 300}, {name: 'Color', price: 1200}],
+    services: [
+      {name: 'Haircut', price: 300, time: 30}, 
+      {name: 'Color', price: 1200, time: 90}
+    ],
     description: "Complete family salon with separate sections for men and women."
   },
   {
@@ -81,66 +107,37 @@ const staticBarbers = [
     reviews: 92,
     isOpen: true,
     personalVisitCharge: 200,
+    address: "Sector 4, Vashi Navi Mumbai",
+    queueLength: 5,
     schedule: "9:00 AM - 9:00 PM",
-    services: [{name: 'Classic Cut', price: 400}, {name: 'Shave', price: 200}],
+    services: [
+      {name: 'Classic Cut', price: 400, time: 35}, 
+      {name: 'Shave', price: 200, time: 20}
+    ],
     description: "Old school barber vibe with modern techniques."
-  },
-  {
-    id: 'demo-7',
-    name: 'Rahul Mehra',
-    shopName: 'Grooming Hub',
-    image: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=800&q=80',
-    rating: 4.1,
-    reviews: 34,
-    isOpen: true,
-    personalVisitCharge: 150,
-    schedule: "10:00 AM - 7:00 PM",
-    services: [{name: 'Haircut', price: 150}, {name: 'Massage', price: 200}],
-    description: "Affordable and hygienic services."
-  },
-  {
-    id: 'demo-8',
-    name: 'Suresh Kumar',
-    shopName: 'The Man Cave',
-    image: 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=800&q=80',
-    rating: 4.7,
-    reviews: 156,
-    isOpen: true,
-    personalVisitCharge: 350,
-    schedule: "8:00 AM - 10:00 PM",
-    services: [{name: 'Premium Cut', price: 500}, {name: 'Spa', price: 1500}],
-    description: "Relax, unwind and get styled."
-  },
-  {
-    id: 'demo-9',
-    name: 'David',
-    shopName: 'Sharp Edges',
-    image: 'https://images.unsplash.com/photo-1532710093739-9470acff878f?auto=format&fit=crop&w=800&q=80',
-    rating: 4.4,
-    reviews: 78,
-    isOpen: false,
-    personalVisitCharge: 200,
-    schedule: "10:00 AM - 8:00 PM",
-    services: [{name: 'Haircut', price: 250}, {name: 'Beard', price: 150}],
-    description: "Precision cutting specialist."
   }
 ];
 
 export default function CustomerDashboard() {
   const [barbers, setBarbers] = useState([]);
+  const [filteredBarbers, setFilteredBarbers] = useState([]);
   const [userCity, setUserCity] = useState('Your City');
   const [userName, setUserName] = useState("Customer");
+  const [selectedService, setSelectedService] = useState('All');
   const navigate = useNavigate();
+
+  // Helper to calculate wait time (Assume avg 20 mins per person in queue)
+  const AVG_TIME_PER_PERSON = 20; 
 
   useEffect(() => {
     const loadData = async () => {
       if (!auth.currentUser) {
         setBarbers(staticBarbers);
+        setFilteredBarbers(staticBarbers);
         return;
       }
 
       try {
-        // 1. Get Current User's Location
         const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
         let myCity = "Mumbai"; 
 
@@ -151,7 +148,6 @@ export default function CustomerDashboard() {
           setUserName(data.name || "Customer");
         }
 
-        // 2. FETCH REAL BARBERS
         const barbersQuery = query(
           collection(db, "users"), 
           where("type", "==", "barber"),
@@ -172,25 +168,42 @@ export default function CustomerDashboard() {
             isOpen: b.isOpen !== undefined ? b.isOpen : true,
             personalVisitCharge: b.personalVisitCharge || 0,
             city: b.city,
-            // --- FIX: Now fetching real schedule ---
+            address: b.address || `${b.city} Market Area`,
+            queueLength: Math.floor(Math.random() * 6), // Random queue for demo
             schedule: b.schedule || "10:00 AM - 9:00 PM",
-            services: b.services && b.services.length > 0 ? b.services : [{name: 'Consultation', price: 0}],
+            services: b.services && b.services.length > 0 ? b.services : [{name: 'Consultation', price: 0, time: 15}],
             isReal: true
           };
         });
 
-        // 3. Prepare Demo Barbers
         const localStaticBarbers = staticBarbers.map(b => ({ ...b, city: myCity }));
-
-        setBarbers([...realBarbers, ...localStaticBarbers]);
+        const allBarbers = [...realBarbers, ...localStaticBarbers];
+        
+        setBarbers(allBarbers);
+        setFilteredBarbers(allBarbers);
 
       } catch (e) {
         console.error("Error loading dashboard:", e);
         setBarbers(staticBarbers);
+        setFilteredBarbers(staticBarbers);
       }
     };
     loadData();
   }, []);
+
+  // Filter Logic
+  useEffect(() => {
+    if (selectedService === 'All') {
+      setFilteredBarbers(barbers);
+    } else {
+      const filtered = barbers.filter(b => 
+        b.services.some(s => s.name.toLowerCase().includes(selectedService.toLowerCase()))
+      );
+      setFilteredBarbers(filtered);
+    }
+  }, [selectedService, barbers]);
+
+  const uniqueServices = ['All', 'Haircut', 'Beard', 'Shave', 'Massage', 'Facial', 'Color'];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors">
@@ -199,8 +212,6 @@ export default function CustomerDashboard() {
       {/* Hero Section */}
       <div className="bg-indigo-900 text-white py-12 px-6 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-20 -mt-20"></div>
-        <div className="absolute bottom-0 left-0 w-40 h-40 bg-white opacity-5 rounded-full -ml-10 -mb-10"></div>
-        
         <div className="max-w-6xl mx-auto relative z-10">
           <h1 className="text-4xl md:text-5xl font-bold mb-3">Hello, {userName} 👋</h1>
           <h2 className="text-2xl text-indigo-200">Find the Best Barbers in <span className="text-white font-bold underline decoration-indigo-400">{userCity}</span></h2>
@@ -209,74 +220,95 @@ export default function CustomerDashboard() {
 
       <div className="max-w-6xl mx-auto px-6 pb-12">
         
-        <div className="flex items-center gap-3 mb-8 animate-fade-in">
-          <Sparkles className="text-indigo-600 dark:text-indigo-400" size={28}/>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 to-purple-600 dark:from-indigo-400 dark:to-purple-400 pb-2">
-            Top Recommendations For You
-          </h2>
+        {/* --- FILTER SECTION --- */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <Sparkles className="text-indigo-600 dark:text-indigo-400" size={28}/>
+            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">Nearby Shops</h2>
+          </div>
+          
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
+            <Filter size={20} className="text-gray-400 min-w-[20px]"/>
+            {uniqueServices.map(service => (
+              <button
+                key={service}
+                onClick={() => setSelectedService(service)}
+                className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
+                  selectedService === service 
+                  ? 'bg-indigo-600 text-white shadow-lg scale-105' 
+                  : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 border hover:border-indigo-300'
+                }`}
+              >
+                {service}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {barbers.map((b) => (
-            <div 
-              key={b.id} 
-              className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer group border ${b.isReal ? 'border-indigo-500 ring-2 ring-indigo-100 dark:ring-indigo-900' : 'border-transparent'} hover:border-indigo-200 dark:hover:border-slate-600`}
-              onClick={() => navigate(`/shop/${b.id}`, {state: {shop: b}})}
-            >
-              <div className="h-56 overflow-hidden relative">
-                <img 
-                  src={b.image} 
-                  alt={b.shopName} 
-                  className="w-full h-full object-cover group-hover:scale-110 transition duration-700"
-                  onError={(e) => { e.target.onerror = null; e.target.src = "https://images.unsplash.com/photo-1503951914875-befbb7470d03?auto=format&fit=crop&w=800&q=80"; }} 
-                />
-                {!b.isOpen && (
-                  <div className="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-[2px] flex items-center justify-center">
-                    <span className="text-white font-bold border-2 border-white px-4 py-2 rounded-lg tracking-widest uppercase">Currently Closed</span>
-                  </div>
-                )}
-                
-                {b.isReal && (
-                  <div className="absolute top-4 left-4 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
-                    <User size={12}/> Verified
-                  </div>
-                )}
+          {filteredBarbers.map((b) => {
+            const waitTime = b.isOpen ? b.queueLength * AVG_TIME_PER_PERSON : 0;
+            const statusColor = b.queueLength > 5 ? 'text-red-500' : b.queueLength > 2 ? 'text-yellow-600' : 'text-green-600';
 
-                <div className="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-t from-black/80 to-transparent"></div>
-              </div>
-              
-              <div className="p-6 relative">
-                <div className="absolute -top-5 right-6 bg-white dark:bg-slate-700 shadow-lg px-3 py-1 rounded-full flex items-center gap-1 font-bold text-sm border border-gray-100 dark:border-slate-600">
-                   <Star size={14} className="text-yellow-500 fill-yellow-500"/>
-                   <span className="dark:text-white">{b.rating}</span>
+            return (
+              <div 
+                key={b.id} 
+                className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer group border ${b.isReal ? 'border-indigo-500 ring-2 ring-indigo-100 dark:ring-indigo-900' : 'border-transparent'}`}
+                onClick={() => navigate(`/shop/${b.id}`, {state: {shop: b}})}
+              >
+                <div className="h-48 overflow-hidden relative">
+                  <img src={b.image} alt={b.shopName} className="w-full h-full object-cover group-hover:scale-110 transition duration-700"/>
+                  
+                  {/* Status Badge */}
+                  <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold shadow-md ${b.isOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {b.isOpen ? 'OPEN NOW' : 'CLOSED'}
+                  </div>
+
+                  {/* Queue Overlay (New) */}
+                  {b.isOpen && (
+                    <div className="absolute bottom-4 left-4 right-4 bg-black/70 backdrop-blur-md p-3 rounded-xl flex items-center justify-between text-white border border-white/20">
+                      <div className="flex items-center gap-2">
+                        <Users size={14} className="text-indigo-400"/>
+                        <span className="text-xs font-bold">Queue: {b.queueLength}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Hourglass size={14} className="text-yellow-400"/>
+                        <span className="text-xs font-bold">~{waitTime} min wait</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{b.shopName}</h3>
                 
-                {/* --- LOCATION --- */}
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-2 flex items-center">
-                  <MapPin size={14} className="mr-1 text-indigo-500"/> {b.city}
-                </p>
-
-                {/* --- TIMING (NEW) --- */}
-                <p className="text-gray-400 dark:text-gray-500 text-xs font-bold mb-4 flex items-center">
-                  <Clock size={12} className="mr-1"/> {b.schedule}
-                </p>
-                
-                <div className="border-t dark:border-slate-700 pt-4 flex justify-between items-center">
-                  <div>
-                    <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Starts From</span>
-                    <span className="text-lg font-bold text-indigo-700 dark:text-indigo-400">
-                      ₹{b.services && b.services.length > 0 ? b.services[0].price : '0'}
-                    </span>
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 transition-colors line-clamp-1">{b.shopName}</h3>
+                    <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
+                       <Star size={14} className="text-yellow-500 fill-yellow-500"/>
+                       <span className="font-bold text-sm text-yellow-700">{b.rating}</span>
+                    </div>
                   </div>
-                  <button className="bg-gray-100 dark:bg-slate-700 hover:bg-indigo-600 hover:text-white text-indigo-900 dark:text-indigo-200 px-4 py-2 rounded-lg font-bold text-sm transition-colors">
-                    View Shop
-                  </button>
+
+                  <p className="text-gray-500 text-xs mb-4 flex items-start gap-1">
+                    <MapPin size={14} className="text-indigo-500 shrink-0 mt-0.5"/> 
+                    {b.address}, {b.city}
+                  </p>
+                  
+                  {/* Service Price Preview */}
+                  <div className="border-t border-gray-100 dark:border-slate-700 pt-4 flex justify-between items-center">
+                    <div>
+                      <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Starting Service</span>
+                      <span className="text-lg font-bold text-indigo-700 dark:text-indigo-400">
+                        ₹{b.services[0].price} <span className="text-xs text-gray-400 font-normal">({b.services[0].time} min)</span>
+                      </span>
+                    </div>
+                    <button className="bg-gray-900 text-white p-2 rounded-lg hover:bg-indigo-600 transition">
+                      <Clock size={18} />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
