@@ -23,6 +23,9 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import Privacy from './pages/Privacy';
 
+// --- NEW IMPORT ---
+import AIStylist from './pages/AIStylist'; 
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
@@ -31,7 +34,6 @@ export default function App() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
-        // Fetch User Role
         const snap = await getDoc(doc(db, "users", u.uid));
         if (snap.exists()) setRole(snap.data().type);
       }
@@ -47,20 +49,20 @@ export default function App() {
     <ThemeProvider>
       <BrowserRouter>
         <Routes>
-          {/* --- PUBLIC ROUTES --- */}
-          {/* FIX: Removed the redirect. Home is now ALWAYS visible. */}
           <Route path="/" element={<Home />} /> 
-          
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/privacy" element={<Privacy />} />
 
-          {/* Login/Register: Only show if NOT logged in, otherwise go to Dashboard */}
+          {/* --- NEW ROUTE FOR AI STYLIST --- */}
+          <Route path="/ai-stylist" element={<AIStylist />} />
+
+          {/* Login/Register */}
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
           <Route path="/register-barber" element={!user ? <BarberRegister /> : <Navigate to="/dashboard" />} />
           <Route path="/register-customer" element={!user ? <CustomerRegister /> : <Navigate to="/dashboard" />} />
           
-          {/* --- PROTECTED ROUTES (Only if Logged IN) --- */}
+          {/* Protected Routes */}
           <Route path="/customer-setup" element={user ? <CustomerSetup /> : <Navigate to="/login" />} />
           
           <Route path="/dashboard" element={

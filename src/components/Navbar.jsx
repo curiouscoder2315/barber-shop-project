@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase/config';
-import { Menu, X, Home, User, Scissors, LogOut, PieChart, Info, Phone } from 'lucide-react';
+import { Menu, X, Home, User, Scissors, LogOut, PieChart, Info, Phone, Sparkles } from 'lucide-react';
 
 export default function Navbar({ role }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,6 +14,8 @@ export default function Navbar({ role }) {
 
   const navLinks = [
     { name: 'Home', path: '/', icon: <Home size={20} /> },
+    // --- NEW AI STYLIST LINK ---
+    { name: 'AI Stylist', path: '/ai-stylist', icon: <Sparkles size={20} /> },
     { name: 'About Us', path: '/about', icon: <Info size={20} /> },
     { name: 'Contact', path: '/contact', icon: <Phone size={20} /> },
   ];
@@ -33,12 +35,11 @@ export default function Navbar({ role }) {
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8">
             {navLinks.map((link) => (
-              <Link key={link.name} to={link.path} className="text-gray-600 hover:text-indigo-600 font-medium">
-                {link.name}
+              <Link key={link.name} to={link.path} className="text-gray-600 hover:text-indigo-600 font-medium flex items-center gap-1">
+                {link.icon} {link.name}
               </Link>
             ))}
             
-            {/* Dynamic Links Based on Role */}
             {role === 'barber' && (
               <Link to="/analytics" className="text-indigo-600 font-bold flex items-center gap-1">
                 <PieChart size={18}/> My Sales
@@ -57,7 +58,7 @@ export default function Navbar({ role }) {
             )}
           </div>
 
-          {/* Mobile Menu Button (Hamburger) */}
+          {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center">
             <button onClick={() => setIsOpen(!isOpen)} className="text-gray-700 focus:outline-none">
               {isOpen ? <X size={28} /> : <Menu size={28} />}
