@@ -1,117 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  RecaptchaVerifier, 
-  signInWithPhoneNumber
-} from 'firebase/auth';
+import React, { useState } from 'react';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { useNavigate, Link } from 'react-router-dom';
-import { Phone, ArrowRight, CheckCircle } from 'lucide-react';
+import { ArrowRight, UserPlus } from 'lucide-react';
 
 export default function CustomerRegister() {
   const navigate = useNavigate();
   
   // State
-  const [data, setData] = useState({ name: '', phone: '', password: '', email: '' });
+  const [data, setData] = useState({ name: '', phone: '', email: '', password: '' });
   const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
   
-  // OTP State
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [confirmationResult, setConfirmationResult] = useState(null);
-
-  // --- THE FIX: RESET RECAPTCHA ON EVERY LOAD ---
-  useEffect(() => {
-    // 1. Clear any old verifier stuck in memory
-    if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
-      window.recaptchaVerifier = null;
-    }
-
-    // 2. Create a brand new verifier attached to the CURRENT page
-    try {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': () => {
-          // Solved
-        },
-        'expired-callback': () => {
-          setStatus("❌ Recaptcha expired. Refresh page.");
-        }
-      });
-    } catch (e) {
-      console.error("Recaptcha Init Error:", e);
-    }
-
-    // 3. Cleanup when leaving the page
-    return () => {
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = null;
-      }
-    };
-  }, []);
-  // ---------------------------------------------
-
-  const validatePhone = (number) => {
-    if (!number) return "Phone number is empty.";
-    const regex = /^[6-9][0-9]{9}$/; 
-    if (!regex.test(number)) return "Invalid Number! Must be 10 digits & start with 6-9.";
-    return null;
-  };
-
-  const handleSendOtp = async () => {
+  const handleRegister = async () => {
     setStatus("");
 
-    if (!data.name || !data.password) {
-      setStatus("❌ Enter Name and Password first.");
+    // Validation
+    if (!data.name || !data.password || !data.email) {
+      setStatus("❌ Enter Name, Email and Password.");
+      return;
+    }
+    if (data.password.length < 6) {
+      setStatus("❌ Password must be at least 6 characters.");
       return;
     }
 
-    const error = validatePhone(data.phone);
-    if (error) { setStatus("❌ " + error); return; }
-    
-    setStatus("⏳ Generating Recaptcha & Sending OTP...");
+    setLoading(true);
+    setStatus("⏳ Creating Account...");
     
     try {
-      const appVerifier = window.recaptchaVerifier;
-      const phoneNumber = "+91" + data.phone; 
+      // 1. Create Auth User
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
 
-      const confirmation = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-      setConfirmationResult(confirmation);
-      setOtpSent(true);
-      setStatus(`✅ OTP sent to ${phoneNumber}`);
-    } catch (error) {
-      console.error(error);
-      setStatus("🔥 SMS Error: " + error.message);
-      
-      // If error, reset recaptcha so they can try again
-      if(window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = null;
-        // Re-init happens on reload, or we could manually re-init here. 
-        // Simplest is to ask user to refresh if it persists, but usually this prevents the "removed" error.
-      }
-    }
-  };
-
-  const handleVerify = async () => {
-    if (!otp || otp.length !== 6) {
-      setStatus("❌ Enter valid 6-digit OTP.");
-      return;
-    }
-    setStatus("⏳ Verifying OTP...");
-
-    try {
-      const result = await confirmationResult.confirm(otp);
-      const user = result.user;
-
+      // 2. Save User Data (Preserving phone as data)
       await setDoc(doc(db, "users", user.uid), {
         type: 'customer',
+        uid: user.uid,
         name: data.name,
-        phone: data.phone,
-        email: data.email || "", 
-        authMethod: 'phone',
+        phone: data.phone, // Saved to database
+        email: data.email, 
+        authMethod: 'email',
         setupComplete: false
       });
 
@@ -119,7 +49,14 @@ export default function CustomerRegister() {
       setTimeout(() => navigate('/customer-setup'), 1000);
 
     } catch (error) {
-      setStatus("❌ Invalid OTP. Try again.");
+      console.error(error);
+      if(error.code === 'auth/email-already-in-use') {
+        setStatus("❌ Email already exists.");
+      } else {
+        setStatus("❌ Error: " + error.message);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,10 +64,10 @@ export default function CustomerRegister() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
         <h2 className="text-3xl font-bold mb-2 text-indigo-900">Sign Up</h2>
-        <p className="text-gray-500 mb-6">Verify mobile to create account.</p>
+        <p className="text-gray-500 mb-6">Create a customer account.</p>
 
         {status && (
-          <div className={`p-3 mb-4 rounded-lg text-sm font-bold text-center ${status.includes("Error") || status.includes("❌") || status.includes("🔥") ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
+          <div className={`p-3 mb-4 rounded-lg text-sm font-bold text-center ${status.includes("Error") || status.includes("❌") ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
             {status}
           </div>
         )}
@@ -141,6 +78,14 @@ export default function CustomerRegister() {
             placeholder="Full Name" 
             value={data.name}
             onChange={e => setData({...data, name: e.target.value})} 
+          />
+          
+          <input 
+            className="w-full p-4 border rounded-xl bg-gray-50" 
+            placeholder="Email Address" 
+            type="email"
+            value={data.email}
+            onChange={e => setData({...data, email: e.target.value})} 
           />
           
           <input 
@@ -166,30 +111,9 @@ export default function CustomerRegister() {
             />
           </div>
 
-          {/* IMPORTANT: Recaptcha Container must be OUTSIDE conditional rendering */}
-          <div id="recaptcha-container"></div>
-
-          {!otpSent ? (
-            <button onClick={handleSendOtp} className="w-full bg-black text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition shadow-lg">
-              Send SMS OTP <ArrowRight size={18}/>
-            </button>
-          ) : (
-            <div className="animate-fade-in bg-green-50 p-4 rounded-xl border border-green-200">
-              <label className="block text-xs font-bold text-green-800 uppercase mb-2">Enter 6-Digit SMS Code</label>
-              <div className="flex gap-2">
-                <input 
-                  className="flex-1 p-3 border border-green-200 rounded-lg text-center font-bold text-xl tracking-widest"
-                  maxLength="6"
-                  placeholder="000000"
-                  value={otp}
-                  onChange={e => setOtp(e.target.value)}
-                />
-                <button onClick={handleVerify} className="bg-green-600 text-white px-6 rounded-lg font-bold hover:bg-green-700 shadow-md">
-                  Verify
-                </button>
-              </div>
-            </div>
-          )}
+          <button disabled={loading} onClick={handleRegister} className="w-full bg-black text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition shadow-lg">
+             {loading ? "Processing..." : <><UserPlus size={18}/> Create Account</>}
+          </button>
           
           <Link to="/" className="block text-center text-sm text-gray-500 mt-4 hover:text-indigo-600">
             Back to Login
